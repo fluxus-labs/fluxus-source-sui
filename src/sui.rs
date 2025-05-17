@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use sui_sdk::rpc_types::{SuiTransactionBlockDataAPI, SuiTransactionBlockResponseOptions};
 use sui_sdk::rpc_types::{SuiTransactionBlockResponse, SuiTransactionBlockResponseQuery};
+use sui_sdk::types::base_types::SuiAddress;
 use sui_sdk::types::messages_checkpoint::CheckpointSequenceNumber;
 use sui_sdk::{SuiClient, SuiClientBuilder};
 use tokio::time::sleep;
@@ -94,7 +95,19 @@ impl SuiSource {
             .transaction
             .as_ref()
             .map(|tx| tx.data.sender().as_ref())
-            .map(|addr| format!("{:?}", addr))
+            .map(|addr| {
+                SuiAddress::try_from(addr)
+                    .map_err(|_| "Invalid sender address format")
+                    .ok()
+                    .map(|addr| addr.to_string())
+                    .unwrap_or_else(|| "unknown".to_string())
+            })
+            .unwrap_or_else(|| "unknown".to_string());
+
+        let metadata = transaction
+            .transaction
+            .as_ref()
+            .map(|tx| format!("{:?}", tx.data))
             .unwrap_or_else(|| "unknown".to_string());
 
         // Try to extract recipient and amount (if applicable)
@@ -107,7 +120,7 @@ impl SuiSource {
             sender,
             recipient,
             amount,
-            metadata: format!("Sui transaction at {}", timestamp),
+            metadata,
         }
     }
 

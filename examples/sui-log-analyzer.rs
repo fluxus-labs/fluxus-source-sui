@@ -38,6 +38,7 @@ async fn process_stream(sui_source: SuiSource) {
             .parallel(2)
             .window(WindowConfig::tumbling(Duration::from_secs(10)))
             .aggregate(HashMap::new(), |mut counts, event| {
+                tracing::debug!("Processing event: {:?}", event);
                 *counts.entry(event.transaction_type).or_insert(0) += 1;
                 counts
             })
