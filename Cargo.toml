@@ -1,30 +1,31 @@
 [package]
-name = "fluxus-source-demo"
+name = "fluxus-source-sui"
 version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Fluxus Team"]
-description = "A demo source implementation for the Fluxus stream processing framework, providing a template for creating custom sources."
-homepage = "https://github.com/fluxus-labs/fluxus-source-demo"
-repository = "https://github.com/fluxus-labs/fluxus-source-demo"
+description = "A Rust library for integrating Sui blockchain data into the Fluxus framework, providing real-time access to Sui network transactions and events."
+homepage = "https://github.com/fluxus-labs/fluxus-source-sui"
+repository = "https://github.com/fluxus-labs/fluxus-source-sui"
 readme = "README.md"
 categories = ["development-tools", "asynchronous"]
 keywords = [
     "stream-processing",
     "real-time",
     "data-processing",
-    "demo",
+    "sui",
     "template"
 ]
 
 [dependencies]
-fluxus = { version="0.1", features = ["full"] }
+fluxus = { version="0.2", features = ["full"] }
 tokio = { version = "1", features = ["full", "time"] }
 serde = { version = "1.0", features = ["derive"] }
 async-trait = "0.1"
 tracing = "0.1"
 tracing-subscriber = "0.3.19"
 
+sui_sdk = { git = "https://github.com/mystenlabs/sui", package = "sui-sdk"}
+
 [dev-dependencies]
 cargo-husky = { version = "1", features = ["precommit-hook", "run-cargo-test", "run-cargo-clippy", "run-cargo-fmt"] }
-tempfile = "3"

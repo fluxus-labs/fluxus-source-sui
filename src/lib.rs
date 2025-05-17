@@ -1,37 +1,38 @@
-//! Fluxus Source Demo
+//! Fluxus Sui Source
 //!
-//! A template project for creating custom Fluxus source components,
-//! demonstrating the implementation of a basic data source with extensible features.
+//! A Rust library for integrating Sui blockchain data into the Fluxus framework,
+//! providing real-time access to Sui network transactions and events.
 //!
 //! ## Features
 //!
-//! - **Comprehensive Source Structure**: A well - defined implementation structure for building Fluxus data sources.
-//! - **Robust Configuration Handling**: Example code demonstrating how to manage and process configurations.
-//! - **Efficient Asynchronous Processing**: Support for asynchronous message handling, enhancing performance.
-//! - **Reliable Error Management**: Built - in error handling and retry mechanisms to ensure data integrity.
-//! - **Seamless Framework Integration**: Designed for easy integration with the Fluxus framework.
+//! - **Sui Network Integration**: Direct connection to Sui blockchain networks (Mainnet, Testnet, Devnet).
+//! - **Transaction Streaming**: Real-time streaming of Sui blockchain transactions with configurable batch sizes.
+//! - **Flexible Configuration**: Customizable polling intervals and transaction batch sizes.
+//! - **Efficient Data Processing**: Optimized for handling high-throughput blockchain data streams.
+//! - **Seamless Framework Integration**: Built for smooth integration with the Fluxus data processing framework.
 //!
 //! ## Usage Examples
 //!
 //! ### Basic Source Implementation
 //! ```rust,no_run
-//! use fluxus_source_demo::DemoSource;
+//! use fluxus_source_sui::SuiSource;
 //! use fluxus::sources::Source;
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     // Create a new demo source
-//!     let mut source = DemoSource::new(100);
+//!     // Create a new Sui source with 500ms polling interval and batch size of 10
+//!     let mut source = SuiSource::new_with_mainnet(500, 10);
 //!     
 //!     // Initialize the source
 //!     source.init().await.unwrap();
 //!     
-//!     // Process data
-//!     while let Ok(Some(data)) = source.next().await {
-//!         println!("Data: {:?}", data);
+//!     // Process transactions
+//!     while let Ok(Some(transaction)) = source.next().await {
+//!         println!("Transaction: {:?}", transaction);
 //!     }
 //! }
 //! ```
 
-mod demo;
-pub use demo::*;
+mod sui;
+
+pub use sui::*;
