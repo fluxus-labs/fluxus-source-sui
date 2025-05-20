@@ -1,10 +1,10 @@
-# Fluxus Source Demo
+# Fluxus Source Sui
 
-A template project for creating custom Fluxus source components, demonstrating the implementation of a basic data source with extensible features.
+A Fluxus source component for processing and analyzing Sui events streams, providing efficient access to historical Sui event data.
 
 ## Overview
 
-fluxus-source-demo is a Rust library template that showcases how to build a Fluxus source component. It provides a foundation for implementing custom data sources with various input methods and processing capabilities.
+fluxus-source-sui is a Rust library that showcases how to build a Fluxus source component for processing and analyzing Sui events streams. It provides a foundation for implementing custom data sources with various input methods and processing capabilities.
 
 ## Features
 
@@ -20,7 +20,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-fluxus-source-demo = "0.1"
+fluxus-source-sui = "0.1"
 ```
 
 ## Usage
@@ -28,17 +28,18 @@ fluxus-source-demo = "0.1"
 ### Basic Source Implementation
 
 ```rust
-use fluxus_source_demo::DemoSource;
+use fluxus_source_sui::EventSource;
 use fluxus::sources::Source;
 
 #[tokio::main]
 async fn main() {
     // Create a new demo source
-    let mut source = DemoSource::new(100);
-    
+    let testnet_uri = "https://fullnode.testnet.sui.io:443";
+    let mut source = EventSource::new(testnet_uri);
+
     // Initialize the source
     source.init().await.unwrap();
-    
+
     // Process data
     while let Ok(Some(data)) = source.next().await {
         println!("Data: {:?}", data);
