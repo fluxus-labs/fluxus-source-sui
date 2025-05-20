@@ -46,27 +46,21 @@ async fn get_full_checkpoint(
     sui_client: sui_rpc_api::Client,
     checkpoint: Option<CheckpointSequenceNumber>,
 ) -> StreamResult<CheckpointData> {
-    let checkpoint_number = if checkpoint.is_none() {
+    let checkpoint_number = if let Some(cp) = checkpoint {
+        cp
+    } else {
         let latest_checkpoint = sui_client
             .get_latest_checkpoint()
             .await
             .map_err(|e| {
-                fluxus::utils::models::StreamError::Io(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("Failed to get latest checkpoint: {}", e),
-                ))
+                fluxus::utils::models::StreamError::Io(std::io::Error::other(format!(
+                    "Failed to get latest checkpoint: {}",
+                    e
+                )))
             })?
             .into_data();
 
-        // Use a checkpoint that's a bit older than the latest to ensure it's stable
-        let sequence_number = latest_checkpoint.sequence_number;
-        if sequence_number > 10 {
-            sequence_number - 10
-        } else {
-            sequence_number
-        }
-    } else {
-        checkpoint.unwrap()
+        latest_checkpoint.sequence_number
     };
 
     tracing::info!("Fetching checkpoint: {}", checkpoint_number);
@@ -75,10 +69,10 @@ async fn get_full_checkpoint(
         .get_full_checkpoint(checkpoint_number)
         .await
         .map_err(|e| {
-            fluxus::utils::models::StreamError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to get full checkpoint: {}", e),
-            ))
+            fluxus::utils::models::StreamError::Io(std::io::Error::other(format!(
+                "Failed to get full checkpoint: {}",
+                e
+            )))
         })?;
 
     Ok(checkpoint)
@@ -99,10 +93,10 @@ fn get_events_from_checkpoint(checkpoint: CheckpointData) -> Vec<Event> {
 impl Source<Event> for EventSource {
     async fn init(&mut self) -> StreamResult<()> {
         let sui_client = sui_rpc_api::Client::new(self.uri.clone()).map_err(|e| {
-            fluxus::utils::models::StreamError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to create Sui client: {}", e),
-            ))
+            fluxus::utils::models::StreamError::Io(std::io::Error::other(format!(
+                "Failed to create Sui client: {}",
+                e
+            )))
         })?;
 
         self.events = get_events(sui_client.clone(), self.checkpoint).await?;
