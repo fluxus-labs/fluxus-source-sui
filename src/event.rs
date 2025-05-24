@@ -182,7 +182,7 @@ impl Source<Vec<ChainEvent>> for SuiEventSource {
                     data: format!("{:?}", event.parsed_json),
                     timestamp: event.timestamp_ms.expect("Timestamp not available"),
                 };
-                tracing::info!(
+                tracing::debug!(
                     "Processed Sui event: {} from package: {}",
                     chain_event.id.tx_digest,
                     chain_event.package_id

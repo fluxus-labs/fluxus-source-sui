@@ -204,7 +204,7 @@ impl Source<Vec<ChainObject>> for SuiObjectSource {
                     .unwrap_or_default(),
             };
 
-            tracing::info!(
+            tracing::debug!(
                 "Processed Sui object: {} version: {} owner: {}",
                 chain_object.id,
                 chain_object.version,

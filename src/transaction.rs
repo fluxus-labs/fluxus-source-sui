@@ -247,7 +247,7 @@ impl Source<Vec<SuiEvent>> for SuiTransactionSource {
             .into_iter()
             .map(|tx| {
                 let event = self.transaction_to_event(tx.clone());
-                tracing::info!(
+                tracing::debug!(
                     "Processed Sui transaction: {} checkpoint: {:?}",
                     tx.digest,
                     tx.checkpoint
