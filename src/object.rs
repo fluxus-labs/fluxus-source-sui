@@ -97,7 +97,7 @@ impl Source<ChainObject> for SuiObjectSource {
             .await
             .map_err(|e| {
                 tracing::error!("Failed to initialize Sui client: {}", e);
-                StreamError::Runtime(e.to_string())
+                StreamError::Runtime(format!("Failed to initialize Sui client: {}", e))
             })?;
 
         self.client = Some(client);
@@ -130,7 +130,7 @@ impl Source<ChainObject> for SuiObjectSource {
             .get_owned_objects(
                 SuiAddress::from_str(&self.target_address).map_err(|e| {
                     tracing::error!("Invalid target address: {}", e);
-                    StreamError::Runtime(e.to_string())
+                    StreamError::Runtime(format!("Invalid target address: {}", e))
                 })?,
                 Some(query),
                 None,
@@ -139,7 +139,7 @@ impl Source<ChainObject> for SuiObjectSource {
             .await
             .map_err(|e| {
                 tracing::error!("Failed to fetch objects: {}", e);
-                StreamError::Runtime(e.to_string())
+                StreamError::Runtime(format!("Failed to fetch objects: {}", e))
             })?;
 
         // Return None if no objects found

@@ -138,7 +138,7 @@ impl Source<SuiEvent> for SuiTransactionSource {
             .await
             .map_err(|e| {
                 tracing::error!("Failed to initialize Sui client: {}", e);
-                StreamError::Runtime(e.to_string())
+                StreamError::Runtime(format!("Failed to initialize Sui client: {}", e))
             })?;
 
         self.client = Some(client);
@@ -185,7 +185,7 @@ impl Source<SuiEvent> for SuiTransactionSource {
             .await
             .map_err(|e| {
                 tracing::error!("Failed to fetch transactions: {}", e);
-                StreamError::Runtime(e.to_string())
+                StreamError::Runtime(format!("Failed to fetch transactions: {}", e))
             })?;
 
         // Return None if no new transactions

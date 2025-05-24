@@ -40,6 +40,8 @@ pub struct SuiEventSource {
     last_processed_event_id: Option<String>,
     /// Event query filter
     query: EventFilter,
+    /// Cursor for pagination
+    cursor: Option<EventID>,
     /// Maximum number of events to fetch
     max_events: usize,
 }
@@ -59,6 +61,7 @@ impl SuiEventSource {
             client: None,
             last_processed_event_id: None,
             query: EventFilter::All([]),
+            cursor: None,
             max_events,
         }
     }
@@ -71,6 +74,12 @@ impl SuiEventSource {
     /// Sets the event query filter
     pub fn with_query(mut self, query: EventFilter) -> Self {
         self.query = query;
+        self
+    }
+
+    /// Sets the cursor for pagination
+    pub fn with_cursor(mut self, cursor: EventID) -> Self {
+        self.cursor = Some(cursor);
         self
     }
 
@@ -92,7 +101,7 @@ impl Source<ChainEvent> for SuiEventSource {
             .await
             .map_err(|e| {
                 tracing::error!("Failed to initialize Sui client: {}", e);
-                StreamError::Runtime(e.to_string())
+                StreamError::Runtime(format!("Failed to initialize Sui client: {}", e))
             })?;
 
         self.client = Some(client);
@@ -120,11 +129,16 @@ impl Source<ChainEvent> for SuiEventSource {
         // Query events
         let events = client
             .event_api()
-            .query_events(self.query.clone(), None, Some(self.max_events), false)
+            .query_events(
+                self.query.clone(),
+                self.cursor,
+                Some(self.max_events),
+                false,
+            )
             .await
             .map_err(|e| {
                 tracing::error!("Failed to fetch events: {}", e);
-                StreamError::Runtime(e.to_string())
+                StreamError::Runtime(format!("Failed to fetch events: {}", e))
             })?;
 
         // Return None if no new events
