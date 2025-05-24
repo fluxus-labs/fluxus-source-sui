@@ -38,6 +38,8 @@ pub struct SuiEventSource {
     client: Option<SuiClient>,
     /// Last processed event ID
     last_processed_event_id: Option<String>,
+    /// Event query filter
+    query: EventFilter,
     /// Maximum number of events to fetch
     max_events: usize,
 }
@@ -56,6 +58,7 @@ impl SuiEventSource {
             initialized: false,
             client: None,
             last_processed_event_id: None,
+            query: EventFilter::All([]),
             max_events,
         }
     }
@@ -63,6 +66,12 @@ impl SuiEventSource {
     /// Creates a new SuiEventSource instance using the default Sui Mainnet RPC endpoint
     pub fn new_with_mainnet(interval_ms: u64, max_events: usize) -> Self {
         Self::new(SUI_MAINNET_URL.to_string(), interval_ms, max_events)
+    }
+
+    /// Sets the event query filter
+    pub fn with_query(mut self, query: EventFilter) -> Self {
+        self.query = query;
+        self
     }
 
     pub fn is_initialized(&self) -> bool {
@@ -111,7 +120,7 @@ impl Source<ChainEvent> for SuiEventSource {
         // Query events
         let events = client
             .event_api()
-            .query_events(EventFilter::All([]), None, Some(self.max_events), false)
+            .query_events(self.query.clone(), None, Some(self.max_events), false)
             .await
             .map_err(|e| {
                 tracing::error!("Failed to fetch events: {}", e);
