@@ -6,6 +6,7 @@ use std::time::Duration;
 use sui_sdk::rpc_types::{SuiTransactionBlockDataAPI, SuiTransactionBlockResponseOptions};
 use sui_sdk::rpc_types::{SuiTransactionBlockResponse, SuiTransactionBlockResponseQuery};
 use sui_sdk::types::base_types::SuiAddress;
+use sui_sdk::types::digests::TransactionDigest;
 use sui_sdk::types::messages_checkpoint::CheckpointSequenceNumber;
 use sui_sdk::{SUI_MAINNET_URL, SuiClient, SuiClientBuilder};
 use tokio::time::sleep;
@@ -42,6 +43,12 @@ pub struct SuiTransactionSource {
     last_processed_digest: Option<String>,
     /// Last processed checkpoint
     last_processed_checkpoint: Option<CheckpointSequenceNumber>,
+    /// Transaction query
+    query: SuiTransactionBlockResponseQuery,
+    /// Cursor for pagination
+    cursor: Option<TransactionDigest>,
+    /// Whether to fetch transactions in descending order
+    descending_order: bool,
     /// Maximum number of transactions to fetch
     max_transactions: usize,
 }
@@ -54,6 +61,13 @@ impl SuiTransactionSource {
     /// * `interval_ms` - Polling interval in milliseconds
     /// * `max_transactions` - Maximum number of transactions to fetch per poll
     pub fn new(rpc_url: String, interval_ms: u64, max_transactions: usize) -> Self {
+        // Set transaction query options
+        let options = SuiTransactionBlockResponseOptions::new()
+            .with_input()
+            .with_effects()
+            .with_events()
+            .with_balance_changes();
+        let query = SuiTransactionBlockResponseQuery::new(None, Some(options));
         Self {
             rpc_url,
             interval: Duration::from_millis(interval_ms),
@@ -61,6 +75,9 @@ impl SuiTransactionSource {
             client: None,
             last_processed_digest: None,
             last_processed_checkpoint: None,
+            cursor: None,
+            query,
+            descending_order: true,
             max_transactions,
         }
     }
@@ -68,6 +85,24 @@ impl SuiTransactionSource {
     /// Creates a new SuiTransactionSource instance using the default Sui Devnet RPC endpoint
     pub fn new_with_mainnet(interval_ms: u64, max_transactions: usize) -> Self {
         Self::new(SUI_MAINNET_URL.to_string(), interval_ms, max_transactions)
+    }
+
+    /// Sets the cursor for pagination
+    pub fn with_cursor(mut self, cursor: TransactionDigest) -> Self {
+        self.cursor = Some(cursor);
+        self
+    }
+
+    /// Sets the query for fetching transactions
+    pub fn with_query(mut self, query: SuiTransactionBlockResponseQuery) -> Self {
+        self.query = query;
+        self
+    }
+
+    /// Sets the descending order flag
+    pub fn with_descending_order(mut self, descending_order: bool) -> Self {
+        self.descending_order = descending_order;
+        self
     }
 
     /// Converts SuiTransactionBlockResponse to SuiEvent
@@ -166,21 +201,14 @@ impl Source<SuiEvent> for SuiTransactionSource {
             StreamError::Runtime("SuiTransactionSource client not available".to_string())
         })?;
 
-        // Set transaction query options
-        let options = SuiTransactionBlockResponseOptions::new()
-            .with_input()
-            .with_effects()
-            .with_events()
-            .with_balance_changes();
-
         // Get recent transactions
         let transactions = client
             .read_api()
             .query_transaction_blocks(
-                SuiTransactionBlockResponseQuery::new(None, Some(options)),
-                None,
+                self.query.clone(),
+                self.cursor,
                 Some(self.max_transactions),
-                true,
+                self.descending_order,
             )
             .await
             .map_err(|e| {

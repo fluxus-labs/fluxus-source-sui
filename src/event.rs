@@ -42,6 +42,8 @@ pub struct SuiEventSource {
     query: EventFilter,
     /// Cursor for pagination
     cursor: Option<EventID>,
+    /// Whether to fetch transactions in descending order
+    descending_order: bool,
     /// Maximum number of events to fetch
     max_events: usize,
 }
@@ -62,6 +64,7 @@ impl SuiEventSource {
             last_processed_event_id: None,
             query: EventFilter::All([]),
             cursor: None,
+            descending_order: true,
             max_events,
         }
     }
@@ -133,7 +136,7 @@ impl Source<ChainEvent> for SuiEventSource {
                 self.query.clone(),
                 self.cursor,
                 Some(self.max_events),
-                false,
+                self.descending_order,
             )
             .await
             .map_err(|e| {

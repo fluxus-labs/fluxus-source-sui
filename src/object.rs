@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 use sui_sdk::rpc_types::{SuiObjectData, SuiObjectDataOptions, SuiObjectResponseQuery};
-use sui_sdk::types::base_types::SuiAddress;
+use sui_sdk::types::base_types::{ObjectID, SuiAddress};
 use sui_sdk::{SUI_MAINNET_URL, SuiClient, SuiClientBuilder};
 use tokio::time::sleep;
 
@@ -40,6 +40,10 @@ pub struct SuiObjectSource {
     target_address: String,
     /// Last processed object version map (object_id -> version)
     last_processed_versions: HashMap<String, u64>,
+    /// Object query
+    query: Option<SuiObjectResponseQuery>,
+    /// Cursor for pagination
+    cursor: Option<ObjectID>,
     /// Maximum number of objects to fetch
     max_objects: usize,
 }
@@ -58,6 +62,7 @@ impl SuiObjectSource {
         target_address: String,
         max_objects: usize,
     ) -> Self {
+        let query = SuiObjectResponseQuery::new_with_options(SuiObjectDataOptions::full_content());
         Self {
             rpc_url,
             interval: Duration::from_millis(interval_ms),
@@ -65,6 +70,8 @@ impl SuiObjectSource {
             client: None,
             target_address,
             last_processed_versions: HashMap::new(),
+            query: Some(query),
+            cursor: None,
             max_objects,
         }
     }
@@ -77,6 +84,18 @@ impl SuiObjectSource {
             target_address,
             max_objects,
         )
+    }
+
+    /// Sets the cursor for pagination
+    pub fn with_cursor(mut self, cursor: ObjectID) -> Self {
+        self.cursor = Some(cursor);
+        self
+    }
+
+    /// Sets the query for object data
+    pub fn with_query(mut self, query: SuiObjectResponseQuery) -> Self {
+        self.query = Some(query);
+        self
     }
 
     pub fn is_initialized(&self) -> bool {
@@ -122,8 +141,6 @@ impl Source<ChainObject> for SuiObjectSource {
             StreamError::Runtime("SuiObjectSource client not available".to_string())
         })?;
 
-        let query = SuiObjectResponseQuery::new_with_options(SuiObjectDataOptions::full_content());
-
         // Query objects owned by the target address
         let objects = client
             .read_api()
@@ -132,8 +149,8 @@ impl Source<ChainObject> for SuiObjectSource {
                     tracing::error!("Invalid target address: {}", e);
                     StreamError::Runtime(format!("Invalid target address: {}", e))
                 })?,
-                Some(query),
-                None,
+                self.query.clone(),
+                self.cursor,
                 Some(self.max_objects),
             )
             .await
