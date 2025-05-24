@@ -3,7 +3,9 @@ use fluxus::sources::Source;
 use fluxus::utils::models::{Record, StreamError, StreamResult};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use sui_sdk::rpc_types::{SuiTransactionBlockDataAPI, SuiTransactionBlockResponseOptions};
+use sui_sdk::rpc_types::{
+    SuiTransactionBlockData, SuiTransactionBlockDataAPI, SuiTransactionBlockResponseOptions,
+};
 use sui_sdk::rpc_types::{SuiTransactionBlockResponse, SuiTransactionBlockResponseQuery};
 use sui_sdk::types::base_types::SuiAddress;
 use sui_sdk::types::digests::TransactionDigest;
@@ -21,12 +23,8 @@ pub struct SuiEvent {
     pub timestamp: u64,
     /// Sender address
     pub sender: String,
-    /// Recipient address (if applicable)
-    pub recipient: Option<String>,
-    /// Transaction amount (if applicable)
-    pub amount: Option<u64>,
     /// Transaction metadata
-    pub metadata: String,
+    pub metadata: Option<SuiTransactionBlockData>,
 }
 
 /// Sui blockchain data source for fetching transaction data from the Sui network
@@ -107,7 +105,7 @@ impl SuiTransactionSource {
 
     /// Converts SuiTransactionBlockResponse to SuiEvent
     fn transaction_to_event(&self, transaction: SuiTransactionBlockResponse) -> SuiEvent {
-        let digest = transaction.digest.to_string();
+        let transaction_digest = transaction.digest.to_string();
         let timestamp = transaction.timestamp_ms.unwrap_or(0);
 
         // Determine transaction type
@@ -135,22 +133,13 @@ impl SuiTransactionSource {
             })
             .unwrap_or_else(|| "unknown".to_string());
 
-        let metadata = transaction
-            .transaction
-            .as_ref()
-            .map(|tx| format!("{:?}", tx.data))
-            .unwrap_or_else(|| "unknown".to_string());
-
-        // Try to extract recipient and amount (if applicable)
-        let (recipient, amount) = (None, None);
+        let metadata = transaction.transaction.as_ref().map(|tx| tx.data.clone());
 
         SuiEvent {
-            transaction_digest: digest,
+            transaction_digest,
             transaction_type,
             timestamp,
             sender,
-            recipient,
-            amount,
             metadata,
         }
     }
