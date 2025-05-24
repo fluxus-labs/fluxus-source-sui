@@ -104,7 +104,7 @@ impl SuiObjectSource {
 }
 
 #[async_trait]
-impl Source<ChainObject> for SuiObjectSource {
+impl Source<Vec<ChainObject>> for SuiObjectSource {
     async fn init(&mut self) -> StreamResult<()> {
         if self.initialized {
             return Ok(());
@@ -126,7 +126,7 @@ impl Source<ChainObject> for SuiObjectSource {
         Ok(())
     }
 
-    async fn next(&mut self) -> StreamResult<Option<Record<ChainObject>>> {
+    async fn next(&mut self) -> StreamResult<Option<Record<Vec<ChainObject>>>> {
         // Ensure initialized
         if !self.initialized || self.client.is_none() {
             return Err(StreamError::Runtime(
@@ -165,7 +165,8 @@ impl Source<ChainObject> for SuiObjectSource {
             return Ok(None);
         }
 
-        // Find the first object with a new version
+        // Process objects with new versions
+        let mut chain_objects = Vec::new();
         for object in objects.data {
             let object_data = object.data.ok_or_else(|| {
                 tracing::error!("Object data is missing");
@@ -210,15 +211,19 @@ impl Source<ChainObject> for SuiObjectSource {
                 chain_object.owner
             );
 
-            return Ok(Some(Record::new(chain_object)));
+            chain_objects.push(chain_object);
         }
 
-        // No new object versions found
-        tracing::info!(
-            "No new object versions found for address: {}",
-            self.target_address
-        );
-        Ok(None)
+        // Return None if no new object versions found
+        if chain_objects.is_empty() {
+            tracing::info!(
+                "No new object versions found for address: {}",
+                self.target_address
+            );
+            return Ok(None);
+        }
+
+        Ok(Some(Record::new(chain_objects)))
     }
 
     async fn close(&mut self) -> StreamResult<()> {

@@ -92,7 +92,7 @@ impl SuiEventSource {
 }
 
 #[async_trait]
-impl Source<ChainEvent> for SuiEventSource {
+impl Source<Vec<ChainEvent>> for SuiEventSource {
     async fn init(&mut self) -> StreamResult<()> {
         if self.initialized {
             return Ok(());
@@ -114,7 +114,7 @@ impl Source<ChainEvent> for SuiEventSource {
         Ok(())
     }
 
-    async fn next(&mut self) -> StreamResult<Option<Record<ChainEvent>>> {
+    async fn next(&mut self) -> StreamResult<Option<Record<Vec<ChainEvent>>>> {
         // Ensure initialized
         if !self.initialized || self.client.is_none() {
             return Err(StreamError::Runtime(
@@ -150,41 +150,48 @@ impl Source<ChainEvent> for SuiEventSource {
             return Ok(None);
         }
 
-        // Get latest event
+        // Get latest event ID
         let latest_event = events
             .data
-            .first()
-            .ok_or_else(|| StreamError::Runtime("Failed to get first event".to_string()))?;
+            .last()
+            .ok_or_else(|| StreamError::Runtime("Failed to get latest event".to_string()))?;
+        let latest_event_id = latest_event.id.tx_digest.to_string();
 
         // Return None if event already processed
         if let Some(last_id) = &self.last_processed_event_id {
-            if last_id == &latest_event.id.tx_digest.to_string() {
+            if last_id == &latest_event_id {
                 tracing::info!("No new events since last check");
                 return Ok(None);
             }
         }
 
         // Update last processed event ID
-        self.last_processed_event_id = Some(latest_event.id.tx_digest.to_string());
+        self.last_processed_event_id = Some(latest_event_id);
 
-        // Convert to chain event
-        let event = ChainEvent {
-            id: latest_event.id,
-            package_id: latest_event.package_id.to_string(),
-            module_name: latest_event.transaction_module.to_string(),
-            event_type: latest_event.type_.to_string(),
-            sender: latest_event.sender.to_string(),
-            data: format!("{:?}", latest_event.parsed_json),
-            timestamp: latest_event.timestamp_ms.expect("Timestamp not available"),
-        };
+        // Convert to chain events
+        let chain_events: Vec<ChainEvent> = events
+            .data
+            .into_iter()
+            .map(|event| {
+                let chain_event = ChainEvent {
+                    id: event.id,
+                    package_id: event.package_id.to_string(),
+                    module_name: event.transaction_module.to_string(),
+                    event_type: event.type_.to_string(),
+                    sender: event.sender.to_string(),
+                    data: format!("{:?}", event.parsed_json),
+                    timestamp: event.timestamp_ms.expect("Timestamp not available"),
+                };
+                tracing::info!(
+                    "Processed Sui event: {} from package: {}",
+                    chain_event.id.tx_digest,
+                    chain_event.package_id
+                );
+                chain_event
+            })
+            .collect();
 
-        tracing::info!(
-            "Processed Sui event: {} from package: {}",
-            event.id.tx_digest,
-            event.package_id
-        );
-
-        Ok(Some(Record::new(event)))
+        Ok(Some(Record::new(chain_events)))
     }
 
     async fn close(&mut self) -> StreamResult<()> {

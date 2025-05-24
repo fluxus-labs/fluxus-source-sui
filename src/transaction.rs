@@ -161,7 +161,7 @@ impl SuiTransactionSource {
 }
 
 #[async_trait]
-impl Source<SuiEvent> for SuiTransactionSource {
+impl Source<Vec<SuiEvent>> for SuiTransactionSource {
     async fn init(&mut self) -> StreamResult<()> {
         if self.initialized {
             return Ok(());
@@ -186,7 +186,7 @@ impl Source<SuiEvent> for SuiTransactionSource {
         Ok(())
     }
 
-    async fn next(&mut self) -> StreamResult<Option<Record<SuiEvent>>> {
+    async fn next(&mut self) -> StreamResult<Option<Record<Vec<SuiEvent>>>> {
         // Ensure initialized
         if !self.initialized || self.client.is_none() {
             return Err(StreamError::Runtime(
@@ -222,11 +222,11 @@ impl Source<SuiEvent> for SuiTransactionSource {
             return Ok(None);
         }
 
-        // Get latest transaction
+        // Get latest transaction digest
         let latest_transaction = transactions
             .data
-            .first()
-            .ok_or_else(|| StreamError::Runtime("Failed to get first transaction".to_string()))?;
+            .last()
+            .ok_or_else(|| StreamError::Runtime("Failed to get latest transaction".to_string()))?;
         let latest_digest = latest_transaction.digest.to_string();
 
         // Return None if transaction already processed
@@ -237,19 +237,26 @@ impl Source<SuiEvent> for SuiTransactionSource {
             }
         }
 
-        // Update last processed digest
-        self.last_processed_digest = Some(latest_digest.clone());
+        // Update last processed digest and checkpoint
+        self.last_processed_digest = Some(latest_digest);
         self.last_processed_checkpoint = latest_transaction.checkpoint;
 
-        // Convert to event and return
-        let event = self.transaction_to_event(latest_transaction.clone());
-        tracing::info!(
-            "Processed Sui transaction: {} checkpoint: {:?}",
-            latest_digest,
-            latest_transaction.checkpoint
-        );
+        // Convert transactions to events
+        let events: Vec<SuiEvent> = transactions
+            .data
+            .into_iter()
+            .map(|tx| {
+                let event = self.transaction_to_event(tx.clone());
+                tracing::info!(
+                    "Processed Sui transaction: {} checkpoint: {:?}",
+                    tx.digest,
+                    tx.checkpoint
+                );
+                event
+            })
+            .collect();
 
-        Ok(Some(Record::new(event)))
+        Ok(Some(Record::new(events)))
     }
 
     async fn close(&mut self) -> StreamResult<()> {

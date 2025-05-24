@@ -39,16 +39,22 @@ async fn test_sui_transaction_source_data_fetching() {
     let result = source.next().await;
     assert!(result.is_ok(), "Fetching transaction data should succeed");
 
-    if let Ok(Some(transaction)) = result {
+    if let Ok(Some(transactions)) = result {
         // Validate basic transaction fields
         assert!(
-            !transaction.data.transaction_digest.is_empty(),
-            "Transaction ID should not be empty"
+            !transactions.data.is_empty(),
+            "Should return non-empty transaction vector"
         );
-        assert!(
-            !transaction.data.sender.is_empty(),
-            "Sender address should not be empty"
-        );
+        for transaction in transactions.data {
+            assert!(
+                !transaction.transaction_digest.is_empty(),
+                "Transaction ID should not be empty"
+            );
+            assert!(
+                !transaction.sender.is_empty(),
+                "Sender address should not be empty"
+            );
+        }
     }
 }
 
@@ -83,8 +89,8 @@ async fn test_sui_transaction_source_batch_size() {
     // Get multiple batches of data
     let mut transaction_count = 0;
     for _ in 0..5 {
-        if let Ok(Some(_)) = source.next().await {
-            transaction_count += 1;
+        if let Ok(Some(transactions)) = source.next().await {
+            transaction_count += transactions.data.len();
         }
         sleep(Duration::from_millis(100)).await;
     }

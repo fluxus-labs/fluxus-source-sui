@@ -46,13 +46,18 @@ async fn test_sui_object_source_data_fetching() {
     let result = source.next().await;
     assert!(result.is_ok(), "Fetching object data should succeed");
 
-    if let Ok(Some(object)) = result {
+    if let Ok(Some(objects)) = result {
         // Validate basic object fields
-        assert!(!object.data.id.is_empty(), "Object ID should not be empty");
         assert!(
-            !object.data.object_type.is_empty(),
-            "Object type should not be empty"
+            !objects.data.is_empty(),
+            "Should return non-empty object vector"
         );
+        for object in objects.data.iter() {
+            assert!(
+                !object.data.object_id.is_empty(),
+                "Object ID should not be empty"
+            );
+        }
     }
 }
 
@@ -87,8 +92,8 @@ async fn test_sui_object_source_batch_size() {
     // Get multiple batches of data
     let mut object_count = 0;
     for _ in 0..5 {
-        if let Ok(Some(_)) = source.next().await {
-            object_count += 1;
+        if let Ok(Some(objects)) = source.next().await {
+            object_count += objects.data.len();
         }
         sleep(Duration::from_millis(100)).await;
     }

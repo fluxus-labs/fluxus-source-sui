@@ -39,16 +39,22 @@ async fn test_sui_event_source_data_fetching() {
     let result = source.next().await;
     assert!(result.is_ok(), "Fetching event data should succeed");
 
-    if let Ok(Some(event)) = result {
+    if let Ok(Some(events)) = result {
         // Validate basic event fields
         assert!(
-            !event.data.id.tx_digest.to_string().is_empty(),
-            "Event ID should not be empty"
+            !events.data.is_empty(),
+            "Should return non-empty event vector"
         );
-        assert!(
-            !event.data.event_type.is_empty(),
-            "Event type should not be empty"
-        );
+        for event in events.data {
+            assert!(
+                !event.id.tx_digest.to_string().is_empty(),
+                "Event ID should not be empty"
+            );
+            assert!(
+                !event.event_type.is_empty(),
+                "Event type should not be empty"
+            );
+        }
     }
 }
 
@@ -83,8 +89,8 @@ async fn test_sui_event_source_batch_size() {
     // Get multiple batches of data
     let mut event_count = 0;
     for _ in 0..5 {
-        if let Ok(Some(_)) = source.next().await {
-            event_count += 1;
+        if let Ok(Some(events)) = source.next().await {
+            event_count += events.data.len();
         }
         sleep(Duration::from_millis(100)).await;
     }

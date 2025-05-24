@@ -39,9 +39,11 @@ async fn process_stream(sui_object_source: SuiObjectSource) {
         DataStream::new(sui_object_source)
             .parallel(2)
             .window(WindowConfig::tumbling(Duration::from_secs(10)))
-            .aggregate(HashMap::new(), |mut counts, object| {
-                tracing::debug!("Processing object: {:?}", object);
-                *counts.entry(object.object_type).or_insert(0) += 1;
+            .aggregate(HashMap::new(), |mut counts, objects| {
+                for object in objects {
+                    tracing::debug!("Processing object: {:?}", object);
+                    *counts.entry(object.object_type).or_insert(0) += 1;
+                }
                 counts
             })
             .sink(sink_clone)
