@@ -1,7 +1,7 @@
 use fluxus::api::{DataStream, io::CollectionSink};
 use fluxus::sources::Source;
 use fluxus::utils::window::WindowConfig;
-use fluxus_source_sui::SuiTransactionSource;
+use fluxus_source_sui::SuiObjectSource;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -10,22 +10,24 @@ async fn main() {
     // Initialize logging
     tracing_subscriber::fmt().init();
 
-    // Create a Sui data source using Mainnet, polling every 500ms, fetching max 10 transactions
-    let mut sui_transaction_source = SuiTransactionSource::new_with_mainnet(500, 10);
-    sui_transaction_source
+    // Create a Sui object source using Mainnet, polling every 500ms, monitoring a specific address
+    let target_address =
+        "0xac5bceec1b789ff840d7d4e6ce4ce61c90d190a7f8c4f4ddf0bff6ee2413c33c".to_string();
+    let mut sui_object_source = SuiObjectSource::new_with_mainnet(500, target_address, 10);
+    sui_object_source
         .init()
         .await
-        .expect("Failed to initialize Sui source");
+        .expect("Failed to initialize Sui object source");
 
-    process_stream(sui_transaction_source).await;
+    process_stream(sui_object_source).await;
 }
 
-async fn process_stream(sui_transaction_source: SuiTransactionSource) {
-    // Create a HashMap to store transaction type counts
-    pub type TransactionTypeCount = HashMap<String, u32>;
+async fn process_stream(sui_object_source: SuiObjectSource) {
+    // Create a HashMap to store object type counts
+    pub type ObjectTypeCount = HashMap<String, u32>;
 
     // Create a sink to collect results
-    let sink: CollectionSink<TransactionTypeCount> = CollectionSink::new();
+    let sink: CollectionSink<ObjectTypeCount> = CollectionSink::new();
     let sink_clone = sink.clone();
 
     // Set a timeout duration for the entire processing
@@ -34,12 +36,12 @@ async fn process_stream(sui_transaction_source: SuiTransactionSource) {
 
     // Process stream with 10-second tumbling window
     let processing = tokio::spawn(async move {
-        DataStream::new(sui_transaction_source)
+        DataStream::new(sui_object_source)
             .parallel(2)
             .window(WindowConfig::tumbling(Duration::from_secs(10)))
-            .aggregate(HashMap::new(), |mut counts, event| {
-                tracing::debug!("Processing event: {:?}", event);
-                *counts.entry(event.transaction_type).or_insert(0) += 1;
+            .aggregate(HashMap::new(), |mut counts, object| {
+                tracing::debug!("Processing object: {:?}", object);
+                *counts.entry(object.object_type).or_insert(0) += 1;
                 counts
             })
             .sink(sink_clone)
@@ -62,8 +64,8 @@ async fn process_stream(sui_transaction_source: SuiTransactionSource) {
         tokio::time::sleep(Duration::from_secs(1)).await;
         if let Some(data) = sink.get_last_element() {
             // Print results for each window
-            for (transaction_type, count) in data {
-                tracing::info!("{}: {}", transaction_type, count);
+            for (object_type, count) in data {
+                tracing::info!("{}: {}", object_type, count);
             }
 
             if i == 10 {
