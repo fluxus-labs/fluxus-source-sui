@@ -7,7 +7,7 @@ use sui_sdk::rpc_types::{SuiTransactionBlockDataAPI, SuiTransactionBlockResponse
 use sui_sdk::rpc_types::{SuiTransactionBlockResponse, SuiTransactionBlockResponseQuery};
 use sui_sdk::types::base_types::SuiAddress;
 use sui_sdk::types::messages_checkpoint::CheckpointSequenceNumber;
-use sui_sdk::{SuiClient, SuiClientBuilder};
+use sui_sdk::{SUI_MAINNET_URL, SuiClient, SuiClientBuilder};
 use tokio::time::sleep;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -29,7 +29,7 @@ pub struct SuiEvent {
 }
 
 /// Sui blockchain data source for fetching transaction data from the Sui network
-pub struct SuiSource {
+pub struct SuiTransactionSource {
     /// Sui RPC endpoint URL
     rpc_url: String,
     /// Polling interval (milliseconds)
@@ -46,8 +46,8 @@ pub struct SuiSource {
     max_transactions: usize,
 }
 
-impl SuiSource {
-    /// Creates a new SuiSource instance
+impl SuiTransactionSource {
+    /// Creates a new SuiTransactionSource instance
     ///
     /// # Parameters
     /// * `rpc_url` - Sui RPC endpoint URL
@@ -65,13 +65,9 @@ impl SuiSource {
         }
     }
 
-    /// Creates a new SuiSource instance using the default Sui Devnet RPC endpoint
+    /// Creates a new SuiTransactionSource instance using the default Sui Devnet RPC endpoint
     pub fn new_with_mainnet(interval_ms: u64, max_transactions: usize) -> Self {
-        Self::new(
-            "https://fullnode.mainnet.sui.io:443".to_string(),
-            interval_ms,
-            max_transactions,
-        )
+        Self::new(SUI_MAINNET_URL.to_string(), interval_ms, max_transactions)
     }
 
     /// Converts SuiTransactionBlockResponse to SuiEvent
@@ -130,7 +126,7 @@ impl SuiSource {
 }
 
 #[async_trait]
-impl Source<SuiEvent> for SuiSource {
+impl Source<SuiEvent> for SuiTransactionSource {
     async fn init(&mut self) -> StreamResult<()> {
         if self.initialized {
             return Ok(());
@@ -147,7 +143,10 @@ impl Source<SuiEvent> for SuiSource {
 
         self.client = Some(client);
         self.initialized = true;
-        tracing::info!("SuiSource initialized with RPC URL: {}", self.rpc_url);
+        tracing::info!(
+            "SuiTransactionSource initialized with RPC URL: {}",
+            self.rpc_url
+        );
 
         Ok(())
     }
@@ -156,17 +155,16 @@ impl Source<SuiEvent> for SuiSource {
         // Ensure initialized
         if !self.initialized || self.client.is_none() {
             return Err(StreamError::Runtime(
-                "SuiSource not initialized".to_string(),
+                "SuiTransactionSource not initialized".to_string(),
             ));
         }
 
         // Polling interval
         sleep(self.interval).await;
 
-        let client = self
-            .client
-            .as_ref()
-            .ok_or_else(|| StreamError::Runtime("SuiSource client not available".to_string()))?;
+        let client = self.client.as_ref().ok_or_else(|| {
+            StreamError::Runtime("SuiTransactionSource client not available".to_string())
+        })?;
 
         // Set transaction query options
         let options = SuiTransactionBlockResponseOptions::new()
@@ -229,7 +227,7 @@ impl Source<SuiEvent> for SuiSource {
     async fn close(&mut self) -> StreamResult<()> {
         self.initialized = false;
         self.client = None;
-        tracing::info!("SuiSource closed");
+        tracing::info!("SuiTransactionSource closed");
         Ok(())
     }
 }

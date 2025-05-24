@@ -1,12 +1,13 @@
 use fluxus::sources::Source;
-use fluxus_source_sui::SuiSource;
+use fluxus_source_sui::SuiTransactionSource;
 use std::time::Duration;
+use sui_sdk::SUI_TESTNET_URL;
 use tokio::time::sleep;
 
 #[tokio::test]
-async fn test_sui_source_initialization() {
-    // Create a new SuiSource instance with mainnet configuration
-    let mut source = SuiSource::new_with_mainnet(500, 10);
+async fn test_sui_transaction_source_initialization() {
+    // Create a new SuiTransactionSource instance with mainnet configuration
+    let mut source = SuiTransactionSource::new_with_mainnet(500, 10);
 
     // Test initialization
     let init_result = source.init().await;
@@ -14,9 +15,9 @@ async fn test_sui_source_initialization() {
 }
 
 #[tokio::test]
-async fn test_sui_source_custom_endpoint() {
-    // Create SuiSource with custom RPC endpoint
-    let mut source = SuiSource::new("https://fullnode.testnet.sui.io:443".to_string(), 500, 10);
+async fn test_sui_transaction_source_custom_endpoint() {
+    // Create SuiTransactionSource with custom RPC endpoint
+    let mut source = SuiTransactionSource::new(SUI_TESTNET_URL.to_string(), 500, 10);
 
     // Test initialization
     let init_result = source.init().await;
@@ -27,9 +28,9 @@ async fn test_sui_source_custom_endpoint() {
 }
 
 #[tokio::test]
-async fn test_sui_source_data_fetching() {
-    // Create SuiSource instance
-    let mut source = SuiSource::new_with_mainnet(500, 5);
+async fn test_sui_transaction_source_data_fetching() {
+    // Create SuiTransactionSource instance
+    let mut source = SuiTransactionSource::new_with_mainnet(500, 5);
 
     // Initialize
     source.init().await.expect("Initialization failed");
@@ -52,9 +53,9 @@ async fn test_sui_source_data_fetching() {
 }
 
 #[tokio::test]
-async fn test_sui_source_polling_interval() {
-    // Create SuiSource with longer polling interval
-    let mut source = SuiSource::new_with_mainnet(1000, 5);
+async fn test_sui_transaction_source_polling_interval() {
+    // Create SuiTransactionSource with longer polling interval
+    let mut source = SuiTransactionSource::new_with_mainnet(1000, 5);
     source.init().await.expect("Initialization failed");
 
     // Record start time
@@ -73,10 +74,10 @@ async fn test_sui_source_polling_interval() {
 }
 
 #[tokio::test]
-async fn test_sui_source_batch_size() {
-    // Create SuiSource with specified batch size
+async fn test_sui_transaction_source_batch_size() {
+    // Create SuiTransactionSource with specified batch size
     let batch_size = 3;
-    let mut source = SuiSource::new_with_mainnet(500, batch_size);
+    let mut source = SuiTransactionSource::new_with_mainnet(500, batch_size);
     source.init().await.expect("Initialization failed");
 
     // Get multiple batches of data
@@ -95,9 +96,10 @@ async fn test_sui_source_batch_size() {
 }
 
 #[tokio::test]
-async fn test_sui_source_error_handling() {
-    // Create SuiSource with invalid RPC endpoint
-    let mut source = SuiSource::new("https://invalid.endpoint.example.com".to_string(), 500, 10);
+async fn test_sui_transaction_source_error_handling() {
+    // Create SuiTransactionSource with invalid RPC endpoint
+    let mut source =
+        SuiTransactionSource::new("https://invalid.endpoint.example.com".to_string(), 500, 10);
 
     // Initialization should fail
     let init_result = source.init().await;
