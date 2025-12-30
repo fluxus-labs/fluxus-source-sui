@@ -178,9 +178,10 @@ impl Source<Vec<ChainObject>> for SuiObjectSource {
 
             // Skip if object version hasn't changed
             if let Some(&last_version) = self.last_processed_versions.get(&object_id)
-                && last_version >= current_version {
-                    continue;
-                }
+                && last_version >= current_version
+            {
+                continue;
+            }
 
             // Update last processed version
             self.last_processed_versions

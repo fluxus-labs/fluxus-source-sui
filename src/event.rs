@@ -159,10 +159,11 @@ impl Source<Vec<ChainEvent>> for SuiEventSource {
 
         // Return None if event already processed
         if let Some(last_id) = &self.last_processed_event_id
-            && last_id == &latest_event_id {
-                tracing::info!("No new events since last check");
-                return Ok(None);
-            }
+            && last_id == &latest_event_id
+        {
+            tracing::info!("No new events since last check");
+            return Ok(None);
+        }
 
         // Update last processed event ID
         self.last_processed_event_id = Some(latest_event_id);
