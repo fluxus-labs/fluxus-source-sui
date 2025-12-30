@@ -219,12 +219,11 @@ impl Source<Vec<SuiEvent>> for SuiTransactionSource {
         let latest_digest = latest_transaction.digest.to_string();
 
         // Return None if transaction already processed
-        if let Some(last_digest) = &self.last_processed_digest {
-            if last_digest == &latest_digest {
+        if let Some(last_digest) = &self.last_processed_digest
+            && last_digest == &latest_digest {
                 tracing::info!("No new transactions since last check");
                 return Ok(None);
             }
-        }
 
         // Update last processed digest and checkpoint
         self.last_processed_digest = Some(latest_digest);
